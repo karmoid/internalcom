@@ -61,7 +61,7 @@ func mailer(ml Mail, logo bool) error {
 	} else {
 		m.SetHeader("From", m.FormatAddress(ml.FromAddr, ml.FromName))
 	}
-	m.SetHeader("From", m.FormatAddress(ml.FromAddr, ml.FromName))
+	// m.SetHeader("From", m.FormatAddress(ml.FromAddr, ml.FromName))
 
 	recipients := strings.SplitN(ml.ToAddr, ";", -1)
 	addresses := make([]string, len(recipients))
