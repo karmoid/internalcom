@@ -115,7 +115,7 @@ func main() {
 	subjectPtr := flag.String("subject", "", "Subject of email")
 	bodyPtr := flag.String("body", "", "Body of email")
 	logofilePtr := flag.String("logofile", LOGO_FILENAME, "Logo filename (jpg | png)")
-	logoPtr := flag.Bool("logo", true, "Put logo at end of email")
+	logoPtr := flag.Bool("logo", false, "Put logo at end of email")
 	portPtr := flag.Int("port", 587, "smtp port")
 
 	flag.Parse()
