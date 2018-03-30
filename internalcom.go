@@ -9,12 +9,14 @@ import (
 	"github.com/go-mail/mail"
 )
 
+// Basic values
 const SMTP_USER_ENV string = "SMTP_USER"
 const SMTP_PWD_ENV string = "SMTP_PWD"
 const LOGO_FILENAME string = "logo.jpg"
-
+const RETRY_COUNT = 5
 const SMTP_ENDPOINT string = "smtp.office365.com"
 
+// Mail - Struct with every args needed for Email processing
 type Mail struct {
 	ToName   string
 	ToAddr   string
@@ -26,6 +28,7 @@ type Mail struct {
 	Port     int
 }
 
+// Mailer - Send a mail from Mail struct
 func mailer(ml Mail, logo bool) error {
 
 	smtp_user := strings.TrimSpace(os.Getenv(SMTP_USER_ENV))
@@ -81,24 +84,22 @@ func mailer(ml Mail, logo bool) error {
 	}
 
 	d := mail.NewDialer(mailer, ml.Port, smtp_user, smtp_pwd)
+	// d.Timeout = 5 * time.Second
 	d.StartTLSPolicy = mail.MandatoryStartTLS
 
 	// Send the email
-	for index := 0; index < 10; index++ {
+	var sendError error
+	for index := 0; index < RETRY_COUNT; index++ {
 		// log.Println("trying a send ", index)
-		err := d.DialAndSend(m)
-		if err == nil {
-			break
+		sendError = d.DialAndSend(m)
+		if sendError == nil {
+			return nil
 		}
-		if strings.Contains(err.Error(), "timeout") {
+		if strings.Contains(sendError.Error(), "timeout") {
 			log.Println("timeout - retry ", index+1)
-			if index < 8 {
-				continue
-			}
 		}
-		return err
 	}
-	return nil
+	return sendError
 }
 
 // main - Entry pont for Internal Communication sender program
@@ -107,7 +108,7 @@ func mailer(ml Mail, logo bool) error {
 // V1.0 - Initial version
 // V1.1 - Port and Logofile args added, "No need to embed Logo if nolog choose" request
 func main() {
-	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.1")
+	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.2")
 
 	toAddrPtr := flag.String("to", "", "To email address")
 	fromNamePtr := flag.String("sender", "", "Sender Name (First & Last)")
