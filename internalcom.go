@@ -25,6 +25,7 @@ type Mail struct {
 	Subject  string
 	Body     string
 	Logofile string
+	Attachmt string
 	Port     int
 }
 
@@ -83,6 +84,13 @@ func mailer(ml Mail, logo bool) error {
 		m.SetBody("text/html", ml.Body)
 	}
 
+	if ml.Attachmt != "" {
+		filenames := strings.SplitN(ml.Attachmt, ";", -1)
+		for _, filename := range filenames {
+			m.Attach(filename)
+		}
+	}
+
 	d := mail.NewDialer(mailer, ml.Port, smtp_user, smtp_pwd)
 	// d.Timeout = 5 * time.Second
 	d.StartTLSPolicy = mail.MandatoryStartTLS
@@ -108,13 +116,14 @@ func mailer(ml Mail, logo bool) error {
 // V1.0 - Initial version
 // V1.1 - Port and Logofile args added, "No need to embed Logo if nolog choose" request
 func main() {
-	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.2")
+	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.3")
 
 	toAddrPtr := flag.String("to", "", "To email address")
 	fromNamePtr := flag.String("sender", "", "Sender Name (First & Last)")
 	fromAddrPtr := flag.String("from", "", "From email address")
 	subjectPtr := flag.String("subject", "", "Subject of email")
 	bodyPtr := flag.String("body", "", "Body of email")
+	attachmtPtr := flag.String("file", "", "File(s) attachment [semicolon as separator]")
 	logofilePtr := flag.String("logofile", LOGO_FILENAME, "Logo filename (jpg | png)")
 	logoPtr := flag.Bool("logo", false, "Put logo at end of email")
 	portPtr := flag.Int("port", 587, "smtp port")
@@ -125,6 +134,7 @@ func main() {
 		FromName: *fromNamePtr,
 		FromAddr: *fromAddrPtr,
 		Subject:  *subjectPtr,
+		Attachmt: *attachmtPtr,
 		Body:     *bodyPtr,
 		Port:     *portPtr,
 		Logofile: *logofilePtr}
