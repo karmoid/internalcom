@@ -86,7 +86,8 @@ func mailer(ml Mail, logo bool) error {
 
 	if ml.Attachmt != "" {
 		filenames := strings.SplitN(ml.Attachmt, ";", -1)
-		for _, filename := range filenames {
+		for i, filename := range filenames {
+			log.Println("Attaching", i, "-", filename)
 			m.Attach(filename)
 		}
 	}
@@ -94,11 +95,11 @@ func mailer(ml Mail, logo bool) error {
 	d := mail.NewDialer(mailer, ml.Port, smtp_user, smtp_pwd)
 	// d.Timeout = 5 * time.Second
 	d.StartTLSPolicy = mail.MandatoryStartTLS
-
 	// Send the email
 	var sendError error
 	for index := 0; index < RETRY_COUNT; index++ {
 		// log.Println("trying a send ", index)
+
 		sendError = d.DialAndSend(m)
 		if sendError == nil {
 			return nil
