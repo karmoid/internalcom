@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -15,30 +16,32 @@ const SMTP_PWD_ENV string = "SMTP_PWD"
 const LOGO_FILENAME string = "logo.jpg"
 const RETRY_COUNT = 5
 const SMTP_ENDPOINT string = "smtp.office365.com"
+const SMTP_ENDPOINT_NO_AUTH string = "brinksco.mail.protection.outlook.com"
 
 // Mail - Struct with every args needed for Email processing
 type Mail struct {
-	ToName   string
-	ToAddr   string
-	FromName string
-	FromAddr string
-	Subject  string
-	Body     string
-	Logofile string
-	Attachmt string
-	Port     int
+	ToName        string
+	ToAddr        string
+	FromName      string
+	FromAddr      string
+	Subject       string
+	Body          string
+	Logofile      string
+	Attachmt      string
+	Port          int
+	Authenticated bool
 }
 
 // Mailer - Send a mail from Mail struct
 func mailer(ml Mail, logo bool) error {
 
 	smtp_user := strings.TrimSpace(os.Getenv(SMTP_USER_ENV))
-	if smtp_user == "" {
+	if ml.Authenticated && smtp_user == "" {
 		log.Fatal("Deploy: Unable to retrieve SMTP user. Make sure environment sets: " + SMTP_USER_ENV)
 	}
 
 	smtp_pwd := strings.TrimSpace(os.Getenv(SMTP_PWD_ENV))
-	if smtp_pwd == "" {
+	if ml.Authenticated && smtp_pwd == "" {
 		log.Fatal("Deploy: Unable to retrieve SMTP password. Make sure environment sets: " + SMTP_PWD_ENV)
 	}
 
@@ -59,6 +62,10 @@ func mailer(ml Mail, logo bool) error {
 	}
 
 	mailer := SMTP_ENDPOINT
+	if !ml.Authenticated {
+		mailer = SMTP_ENDPOINT_NO_AUTH
+	}
+
 	m := mail.NewMessage()
 	if ml.FromName == "" {
 		m.SetHeader("From", ml.FromAddr)
@@ -92,9 +99,12 @@ func mailer(ml Mail, logo bool) error {
 		}
 	}
 
+	// log.Println("Send to", mailer, ml.Port, smtp_user, smtp_pwd)
 	d := mail.NewDialer(mailer, ml.Port, smtp_user, smtp_pwd)
 	// d.Timeout = 5 * time.Second
-	d.StartTLSPolicy = mail.MandatoryStartTLS
+	if ml.Authenticated {
+		d.StartTLSPolicy = mail.MandatoryStartTLS
+	}
 	// Send the email
 	var sendError error
 	for index := 0; index < RETRY_COUNT; index++ {
@@ -116,8 +126,10 @@ func mailer(ml Mail, logo bool) error {
 //
 // V1.0 - Initial version
 // V1.1 - Port and Logofile args added, "No need to embed Logo if nolog choose" request
+// V1.3 - Ajout de fichiers multiples
+// V1.4 - Gestion du mode non authentifie (smtp:25)
 func main() {
-	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.3")
+	log.Println("internalcom - Internal Communication - Email through O365 - C.m. V1.4")
 
 	toAddrPtr := flag.String("to", "", "To email address")
 	fromNamePtr := flag.String("sender", "", "Sender Name (First & Last)")
@@ -127,18 +139,21 @@ func main() {
 	attachmtPtr := flag.String("file", "", "File(s) attachment [semicolon as separator]")
 	logofilePtr := flag.String("logofile", LOGO_FILENAME, "Logo filename (jpg | png)")
 	logoPtr := flag.Bool("logo", false, "Put logo at end of email")
-	portPtr := flag.Int("port", 587, "smtp port")
+	portPtr := flag.Int("port", 25, "smtp port. Put 587 for Authenticated mode")
+	authenticatedPtr := flag.Bool("authent", false, fmt.Sprintf("use TLS authentication (%s) else no-Auth (%s)", SMTP_ENDPOINT, SMTP_ENDPOINT_NO_AUTH))
 
 	flag.Parse()
 
 	m := Mail{ToAddr: *toAddrPtr,
-		FromName: *fromNamePtr,
-		FromAddr: *fromAddrPtr,
-		Subject:  *subjectPtr,
-		Attachmt: *attachmtPtr,
-		Body:     *bodyPtr,
-		Port:     *portPtr,
-		Logofile: *logofilePtr}
+		FromName:      *fromNamePtr,
+		FromAddr:      *fromAddrPtr,
+		Subject:       *subjectPtr,
+		Attachmt:      *attachmtPtr,
+		Body:          *bodyPtr,
+		Port:          *portPtr,
+		Logofile:      *logofilePtr,
+		Authenticated: *authenticatedPtr,
+	}
 
 	err := mailer(m, *logoPtr)
 	if err != nil {
